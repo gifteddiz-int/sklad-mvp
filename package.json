@@ -9,7 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "echo \"No linting configured\"",
+    "type-check": "vue-tsc --noEmit"
   },
   "keywords": [],
   "author": {
@@ -28,8 +29,11 @@
     "@electron-forge/plugin-vite": "^7.10.2",
     "@electron/fuses": "^1.8.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/tsconfig": "^0.8.1",
     "electron": "38.2.2",
-    "vite": "^5.4.20"
+    "typescript": "^5.9.3",
+    "vite": "^5.4.20",
+    "vue-tsc": "^3.1.1"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",

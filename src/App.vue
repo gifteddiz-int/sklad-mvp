@@ -2,4 +2,4 @@
   <h1>Стартуем тут</h1>
 </template>
 
-<script setup></script>
+<script setup lang="ts"></script>
