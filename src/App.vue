@@ -107,6 +107,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import * as XLSX from "xlsx";
+// @ts-ignore
 import { saveAs } from "file-saver";
 
 // Интерфейсы
@@ -139,9 +140,9 @@ const scannerInput = ref<HTMLInputElement>();
 
 // Звуки (замени пути на реальные)
 const sounds = {
-  success: new Audio("/src/assets/sounds/beep-success.mp3"),
-  error: new Audio("/src/assets/sounds/beep-error.mp3"),
-  nextBox: new Audio("/src/assets/sounds/next-box.mp3"),
+  success: new Audio("./sounds/beep-success.mp3"),
+  error: new Audio("./sounds/beep-error.mp3"),
+  nextBox: new Audio("./sounds/next-box.mp3"),
 };
 
 // Вычисляемые свойства
