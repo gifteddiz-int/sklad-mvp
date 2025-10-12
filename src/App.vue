@@ -1,88 +1,5 @@
 <template>
   <div class="container mt-4">
-    <h1 class="text-primary mb-4">Сканер штрих-кодов</h1>
-
-    <!-- Настройки -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <h5 class="card-title">Настройки сканирования</h5>
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label for="startBox" class="form-label">Начальный номер коробки</label>
-            <input type="number" class="form-control" id="startBox" v-model.number="settings.startBoxNumber" min="1" />
-          </div>
-          <div class="col-md-4">
-            <label for="boxCapacity" class="form-label">Количество кодов в коробке</label>
-            <input type="number" class="form-control" id="boxCapacity" v-model.number="settings.codesPerBox" min="1" />
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Текущая коробка</label>
-            <div class="form-control bg-light">{{ currentBoxNumber }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Поле ввода -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <h5 class="card-title">Сканирование</h5>
-        <input type="text" class="form-control form-control-lg" v-model="currentCode" @keydown.enter="handleScan" ref="scannerInput" placeholder="Поднесите штрих-код для сканирования..." autofocus />
-        <div class="form-text">Поле всегда активно для сканирования</div>
-      </div>
-    </div>
-
-    <!-- Статус -->
-    <div v-if="alertMessage" :class="`alert alert-${alertType} alert-dismissible fade show`" role="alert">
-      {{ alertMessage }}
-      <button type="button" class="btn-close" @click="alertMessage = ''"></button>
-    </div>
-
-    <!-- Таблица отсканированных кодов -->
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title mb-0">Отсканированные коды</h5>
-          <button class="btn btn-success" @click="exportToExcel"><i class="bi bi-download"></i> Экспорт в Excel</button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead>
-              <tr>
-                <th>Время</th>
-                <th>Код</th>
-                <th>Коробка</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(scan, index) in scannedCodes" :key="scan.id">
-                <td>{{ formatTime(scan.timestamp) }}</td>
-                <td>
-                  <code>{{ scan.code }}</code>
-                </td>
-                <td>
-                  <span class="badge bg-primary">#{{ scan.boxNumber }}</span>
-                </td>
-                <td>
-                  <button class="btn btn-sm btn-outline-danger" @click="removeScan(index)">Удалить</button>
-                </td>
-              </tr>
-              <tr v-if="scannedCodes.length === 0">
-                <td colspan="4" class="text-center text-muted py-4">Нет отсканированных кодов</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <small class="text-muted"> Всего отсканировано: {{ scannedCodes.length }} кодов </small>
-          <small class="text-muted"> В текущей коробке: {{ codesInCurrentBox }} из {{ settings.codesPerBox }} </small>
-        </div>
-      </div>
-    </div>
-
     <!-- Восстановление данных -->
     <div v-if="showRecovery" class="modal fade show d-block" style="background: rgba(0, 0, 0, 0.5)">
       <div class="modal-dialog">
@@ -97,6 +14,128 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" @click="startNewSession">Начать заново</button>
             <button type="button" class="btn btn-primary" @click="recoverSession">Восстановить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Экран начальной настройки -->
+    <div v-if="!isConfigured && !showRecovery" class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4">Настройки сканирования</h2>
+            <form @submit.prevent="confirmSettings">
+              <div class="mb-3">
+                <label for="startBox" class="form-label">Начальный номер коробки</label>
+                <input type="number" class="form-control" id="startBox" v-model.number="settings.startBoxNumber" min="1" required autofocus />
+              </div>
+              <div class="mb-3">
+                <label for="boxCapacity" class="form-label">Количество кодов в коробке</label>
+                <input type="number" class="form-control" id="boxCapacity" v-model.number="settings.codesPerBox" min="1" required />
+              </div>
+              <button type="submit" class="btn btn-primary w-100 btn-lg">Начать сканирование</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Основной интерфейс сканирования -->
+    <div v-else-if="isConfigured">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">Сканер штрих-кодов</h1>
+        <button class="btn btn-warning" @click="isConfigured = false">Изменить настройки</button>
+      </div>
+
+      <!-- Компактная панель настроек -->
+      <div class="card mb-4">
+        <div class="card-body py-3">
+          <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">Старт:</span>
+                <strong>#{{ settings.startBoxNumber }}</strong>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">В коробке:</span>
+                <strong>{{ settings.codesPerBox }} шт</strong>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">Текущая:</span>
+                <strong class="text-primary">#{{ currentBoxNumber }}</strong>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">Заполнено:</span>
+                <strong>{{ codesInCurrentBox }}/{{ settings.codesPerBox }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Поле ввода -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Сканирование</h5>
+          <input type="text" class="form-control form-control-lg" v-model="currentCode" @keydown.enter="handleScan" ref="scannerInput" placeholder="Поднесите штрих-код для сканирования..." autofocus />
+          <div class="form-text">Поле всегда активно для сканирования</div>
+        </div>
+      </div>
+
+      <!-- Статус -->
+      <div v-if="alertMessage" :class="`alert alert-${alertType} alert-dismissible fade show`" role="alert">
+        {{ alertMessage }}
+        <button type="button" class="btn-close" @click="alertMessage = ''"></button>
+      </div>
+
+      <!-- Таблица отсканированных кодов -->
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">Отсканированные коды</h5>
+            <button class="btn btn-success" @click="exportToExcel"><i class="bi bi-download"></i> Экспорт в Excel</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Время</th>
+                  <th>Код</th>
+                  <th>Коробка</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(scan, index) in scannedCodes" :key="scan.id">
+                  <td>{{ formatTime(scan.timestamp) }}</td>
+                  <td>
+                    <code>{{ scan.code }}</code>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">#{{ scan.boxNumber }}</span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger" @click="removeScan(index)">Удалить</button>
+                  </td>
+                </tr>
+                <tr v-if="scannedCodes.length === 0">
+                  <td colspan="4" class="text-center text-muted py-4">Нет отсканированных кодов</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted"> Всего отсканировано: {{ scannedCodes.length }} кодов </small>
+            <small class="text-muted"> В текущей коробке: {{ codesInCurrentBox }} из {{ settings.codesPerBox }} </small>
           </div>
         </div>
       </div>
@@ -129,6 +168,7 @@ const settings = ref<AppSettings>({
   codesPerBox: 10,
 });
 
+const isConfigured = ref(false);
 const currentCode = ref("");
 const scannedCodes = ref<ScanRecord[]>([]);
 const currentBoxNumber = ref(1);
@@ -138,7 +178,7 @@ const showRecovery = ref(false);
 const recoveryDate = ref("");
 const scannerInput = ref<HTMLInputElement>();
 
-// Звуки (замени пути на реальные)
+// Звуки
 const sounds = {
   success: new Audio("./sounds/beep-success.mp3"),
   error: new Audio("./sounds/beep-error.mp3"),
@@ -181,7 +221,24 @@ const showAlert = (message: string, type: "success" | "danger" | "warning" = "su
   }, 3000);
 };
 
+const confirmSettings = () => {
+  if (settings.value.startBoxNumber < 1 || settings.value.codesPerBox < 1) {
+    showAlert("Пожалуйста, введите корректные значения настроек", "danger");
+    return;
+  }
+
+  currentBoxNumber.value = settings.value.startBoxNumber;
+  isConfigured.value = true;
+  nextTick(() => {
+    if (scannerInput.value) {
+      scannerInput.value.focus();
+    }
+  });
+};
+
 const handleScan = () => {
+  if (!isConfigured.value) return;
+
   const code = currentCode.value.trim();
 
   if (!code) {
@@ -275,8 +332,15 @@ const recoverSession = () => {
       timestamp: new Date(scan.timestamp),
     }));
     currentBoxNumber.value = savedData.currentBoxNumber;
+    isConfigured.value = true;
     showRecovery.value = false;
     showAlert("Сессия восстановлена");
+
+    nextTick(() => {
+      if (scannerInput.value) {
+        scannerInput.value.focus();
+      }
+    });
   }
 };
 
@@ -285,6 +349,7 @@ const startNewSession = () => {
   scannedCodes.value = [];
   currentBoxNumber.value = settings.value.startBoxNumber;
   showRecovery.value = false;
+  isConfigured.value = false;
   showAlert("Новая сессия начата");
 };
 
@@ -303,11 +368,7 @@ onMounted(() => {
     recoveryDate.value = new Date(savedData.lastSave).toLocaleString("ru-RU");
   } else {
     currentBoxNumber.value = settings.value.startBoxNumber;
-  }
-
-  // Фокус на поле ввода
-  if (scannerInput.value) {
-    scannerInput.value.focus();
+    isConfigured.value = false;
   }
 
   // Автосохранение настроек
@@ -320,11 +381,13 @@ onMounted(() => {
 
   // Обработчик глобальных событий для фокуса
   const handleGlobalClick = () => {
-    nextTick(() => {
-      if (scannerInput.value) {
-        scannerInput.value.focus();
-      }
-    });
+    if (isConfigured.value) {
+      nextTick(() => {
+        if (scannerInput.value) {
+          scannerInput.value.focus();
+        }
+      });
+    }
   };
 
   document.addEventListener("click", handleGlobalClick);
@@ -349,5 +412,14 @@ onMounted(() => {
 
 .modal {
   background: rgba(0, 0, 0, 0.5);
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge.bg-light {
+  font-size: 0.75em;
+  padding: 0.35em 0.65em;
 }
 </style>
