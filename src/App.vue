@@ -1,5 +1,6 @@
 <template>
   <div class="container mt-4">
+    <ToastContainer position="top-right" />
     <!-- Восстановление данных -->
     <div v-if="showRecovery" class="modal fade show d-block" style="background: rgba(0, 0, 0, 0.5)">
       <div class="modal-dialog">
@@ -148,6 +149,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import * as XLSX from "xlsx";
 // @ts-ignore
 import { saveAs } from "file-saver";
+import ToastContainer from "@/components/ToastContainer.vue";
+import { useToasts } from "@/composables/useToasts";
 
 // Интерфейсы
 interface ScanRecord {
@@ -213,12 +216,12 @@ const playSound = async (soundType: keyof typeof sounds) => {
   }
 };
 
-const showAlert = (message: string, type: "success" | "danger" | "warning" = "success") => {
+const { push: pushToast } = useToasts();
+const showAlert = (message: string, type: "success" | "info" | "danger" | "warning" = "success") => {
+  // сохранить совместимость со старым UI и параллельно показывать тосты
   alertMessage.value = message;
   alertType.value = type;
-  setTimeout(() => {
-    alertMessage.value = "";
-  }, 3000);
+  pushToast(message, type);
 };
 
 const confirmSettings = () => {
@@ -327,7 +330,9 @@ const saveToStorage = () => {
   window.fileStore?.saveSession(data)
     // @ts-ignore
     .then((res) => console.debug('Session saved to:', res?.filePath))
-    .catch(() => {});
+    .catch(() => {
+      showAlert('Не удалось сохранить сессию на диск', 'danger');
+    });
 };
 
 const loadFromStorage = async (): Promise<any | null> => {
@@ -392,7 +397,9 @@ onMounted(async () => {
   // Автосохранение настроек в файл
   const saveSettings = () => {
     // @ts-ignore - глобальный API из preload
-    window.fileStore?.saveSettings?.({ ...settings.value }).catch(() => {});
+    window.fileStore?.saveSettings?.({ ...settings.value }).catch(() => {
+      showAlert('Не удалось сохранить настройки', 'danger');
+    });
   };
 
   // Следим за изменениями настроек
