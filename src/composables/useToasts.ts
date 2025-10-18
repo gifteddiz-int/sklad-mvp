@@ -1,79 +1,16 @@
-import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useToastStore } from '@/stores/toastStore';
 
-export type ToastLevel = 'success' | 'info' | 'warning' | 'danger';
+export const useToasts = () => {
+  const store = useToastStore();
+  const { toasts, history } = storeToRefs(store);
 
-export interface ToastItem {
-  id: string;
-  message: string;
-  level: ToastLevel;
-  title?: string;
-  duration?: number;
-}
-
-const toasts = ref<ToastItem[]>([]);
-interface ToastHistoryItem {
-  id: string;
-  message: string;
-  level: ToastLevel;
-  title?: string;
-  time: string; // ISO
-}
-const history = ref<ToastHistoryItem[]>([]);
-
-const defaultDurations: Record<ToastLevel, number> = {
-  success: 3000,
-  info: 4000,
-  warning: 5000,
-  danger: 6000,
+  return {
+    toasts,
+    history,
+    push: store.push,
+    remove: store.remove,
+    clear: store.clear,
+    clearHistory: store.clearHistory,
+  };
 };
-
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-export function useToasts() {
-  const push = (message: string, level: ToastLevel = 'info', opts?: { title?: string; duration?: number }) => {
-    const id = genId();
-    const item: ToastItem = {
-      id,
-      message,
-      level,
-      title: opts?.title,
-      duration: opts?.duration ?? defaultDurations[level],
-    };
-
-    // ограничим очередь до 5 тостов
-    if (toasts.value.length >= 5) {
-      toasts.value.shift();
-    }
-
-    toasts.value.push(item);
-
-    // также пополняем историю (до 200 записей)
-    history.value.push({ id, message, level, title: opts?.title, time: new Date().toISOString() });
-    if (history.value.length > 200) {
-      history.value.shift();
-    }
-
-    if (item.duration && item.duration > 0) {
-      setTimeout(() => remove(id), item.duration);
-    }
-
-    return id;
-  };
-
-  const remove = (id: string) => {
-    const idx = toasts.value.findIndex((t) => t.id === id);
-    if (idx >= 0) toasts.value.splice(idx, 1);
-  };
-
-  const clear = () => {
-    toasts.value = [];
-  };
-
-  const clearHistory = () => {
-    history.value = [];
-  };
-
-  return { toasts, push, remove, clear, history, clearHistory };
-}

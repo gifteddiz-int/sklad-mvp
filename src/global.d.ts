@@ -3,12 +3,11 @@ export {};
 declare global {
   interface Window {
     fileStore?: {
-      saveSession: (data: any) => Promise<{ filePath: string }>;
-      loadLatestSession: () => Promise<any | null>;
+      saveSession: (data: import('@/types/session').SessionSnapshotDTO) => Promise<{ filePath: string } | void>;
+      loadLatestSession: () => Promise<import('@/types/session').SessionSnapshotDTO | null>;
       clearSession: () => Promise<void>;
-      saveSettings: (settings: any) => Promise<void>;
-      loadSettings: () => Promise<any | null>;
+      saveSettings: (settings: import('@/types/session').SessionSettings) => Promise<void>;
+      loadSettings: () => Promise<import('@/types/session').SessionSettings | null>;
     };
   }
 }
-
