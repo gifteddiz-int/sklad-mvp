@@ -11,6 +11,14 @@ export interface ToastItem {
 }
 
 const toasts = ref<ToastItem[]>([]);
+interface ToastHistoryItem {
+  id: string;
+  message: string;
+  level: ToastLevel;
+  title?: string;
+  time: string; // ISO
+}
+const history = ref<ToastHistoryItem[]>([]);
 
 const defaultDurations: Record<ToastLevel, number> = {
   success: 3000,
@@ -41,6 +49,12 @@ export function useToasts() {
 
     toasts.value.push(item);
 
+    // также пополняем историю (до 200 записей)
+    history.value.push({ id, message, level, title: opts?.title, time: new Date().toISOString() });
+    if (history.value.length > 200) {
+      history.value.shift();
+    }
+
     if (item.duration && item.duration > 0) {
       setTimeout(() => remove(id), item.duration);
     }
@@ -57,6 +71,9 @@ export function useToasts() {
     toasts.value = [];
   };
 
-  return { toasts, push, remove, clear };
-}
+  const clearHistory = () => {
+    history.value = [];
+  };
 
+  return { toasts, push, remove, clear, history, clearHistory };
+}

@@ -46,7 +46,12 @@
     <div v-else-if="isConfigured">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="text-primary mb-0">Сканер штрих-кодов</h1>
-        <button class="btn btn-warning" @click="isConfigured = false">Изменить настройки</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" @click="showToastHistory = true" title="История уведомлений" aria-label="История уведомлений">
+            <i class="bi bi-bell"></i>
+          </button>
+          <button class="btn btn-warning" @click="isConfigured = false">Изменить настройки</button>
+        </div>
       </div>
 
       <!-- Компактная панель настроек -->
@@ -90,11 +95,7 @@
         </div>
       </div>
 
-      <!-- Статус -->
-      <div v-if="alertMessage" :class="`alert alert-${alertType} alert-dismissible fade show`" role="alert">
-        {{ alertMessage }}
-        <button type="button" class="btn-close" @click="alertMessage = ''"></button>
-      </div>
+      <!-- Убрали встроенный alert; тосты показываются отдельно -->
 
       <!-- Таблица отсканированных кодов -->
       <div class="card">
@@ -142,6 +143,7 @@
       </div>
     </div>
   </div>
+  <ToastHistoryModal :show="showToastHistory" @close="showToastHistory = false" />
 </template>
 
 <script setup lang="ts">
@@ -150,6 +152,7 @@ import * as XLSX from "xlsx";
 // @ts-ignore
 import { saveAs } from "file-saver";
 import ToastContainer from "@/components/ToastContainer.vue";
+import ToastHistoryModal from "@/components/ToastHistoryModal.vue";
 import { useToasts } from "@/composables/useToasts";
 
 // Интерфейсы
@@ -175,8 +178,7 @@ const isConfigured = ref(false);
 const currentCode = ref("");
 const scannedCodes = ref<ScanRecord[]>([]);
 const currentBoxNumber = ref(1);
-const alertMessage = ref("");
-const alertType = ref("success");
+const showToastHistory = ref(false);
 const showRecovery = ref(false);
 const recoveryDate = ref("");
 const scannerInput = ref<HTMLInputElement>();
@@ -218,9 +220,7 @@ const playSound = async (soundType: keyof typeof sounds) => {
 
 const { push: pushToast } = useToasts();
 const showAlert = (message: string, type: "success" | "info" | "danger" | "warning" = "success") => {
-  // сохранить совместимость со старым UI и параллельно показывать тосты
-  alertMessage.value = message;
-  alertType.value = type;
+  // Показываем через тосты; история доступна в модальном окне
   pushToast(message, type);
 };
 
@@ -326,11 +326,12 @@ const saveToStorage = () => {
   };
   // fire-and-forget, не блокируем UI
   // @ts-ignore - глобальный API из preload
-  window.fileStore?.saveSession(data)
+  window.fileStore
+    ?.saveSession(data)
     // @ts-ignore
-    .then((res) => console.debug('Session saved to:', res?.filePath))
+    .then((res) => console.debug("Session saved to:", res?.filePath))
     .catch(() => {
-      showAlert('Не удалось сохранить сессию на диск', 'danger');
+      showAlert("Не удалось сохранить сессию на диск", "danger");
     });
 };
 
@@ -397,7 +398,7 @@ onMounted(async () => {
   const saveSettings = () => {
     // @ts-ignore - глобальный API из preload
     window.fileStore?.saveSettings?.({ ...settings.value }).catch(() => {
-      showAlert('Не удалось сохранить настройки', 'danger');
+      showAlert("Не удалось сохранить настройки", "danger");
     });
   };
 
