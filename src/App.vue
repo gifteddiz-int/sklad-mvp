@@ -13,8 +13,27 @@
             <p>Хотите восстановить предыдущую сессию сканирования?</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="startNewSession">Начать заново</button>
+            <button type="button" class="btn btn-secondary" @click="showStartOverConfirm = true">Начать заново</button>
             <button type="button" class="btn btn-primary" @click="recoverSession">Восстановить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Подтверждение начала новой сессии (красное предупреждение) -->
+    <div v-if="showStartOverConfirm" class="modal fade show d-block" style="background: rgba(0, 0, 0, 0.5)">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">Подтверждение сброса</h5>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2">Вы уверены, что хотите начать заново?</p>
+            <p class="mb-0">Все отсканированные данные текущей сессии и история уведомлений будут безвозвратно удалены.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" @click="showStartOverConfirm = false">Отмена</button>
+            <button type="button" class="btn btn-danger" @click="confirmStartNewSession">Да, начать заново</button>
           </div>
         </div>
       </div>
@@ -180,6 +199,7 @@ const scannedCodes = ref<ScanRecord[]>([]);
 const currentBoxNumber = ref(1);
 const showToastHistory = ref(false);
 const showRecovery = ref(false);
+const showStartOverConfirm = ref(false);
 const recoveryDate = ref("");
 const scannerInput = ref<HTMLInputElement>();
 
@@ -218,7 +238,7 @@ const playSound = async (soundType: keyof typeof sounds) => {
   }
 };
 
-const { push: pushToast } = useToasts();
+const { push: pushToast, clearHistory } = useToasts();
 const showAlert = (message: string, type: "success" | "info" | "danger" | "warning" = "success") => {
   // Показываем через тосты; история доступна в модальном окне
   pushToast(message, type);
@@ -371,6 +391,13 @@ const startNewSession = () => {
   showRecovery.value = false;
   isConfigured.value = false;
   showAlert("Новая сессия начата");
+};
+
+const confirmStartNewSession = () => {
+  // Очистить историю уведомлений текущей сессии
+  try { clearHistory(); } catch {}
+  startNewSession();
+  showStartOverConfirm.value = false;
 };
 
 // Хуки жизненного цикла
