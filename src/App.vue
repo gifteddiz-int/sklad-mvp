@@ -248,12 +248,11 @@ const handleScan = () => {
     return;
   }
 
-  // Проверка на дубликат в текущей сессии
-  const isDuplicate = scannedCodes.value.some((scan) => scan.code === code);
-
-  if (isDuplicate) {
+  // Проверка на дубликат в текущей сессии с указанием коробки
+  const duplicate = scannedCodes.value.find((scan) => scan.code === code);
+  if (duplicate) {
     playSound("error");
-    showAlert(`Код "${code}" уже был отсканирован ранее!`, "danger");
+    showAlert(`Код "${code}" уже был отсканирован ранее в коробке #${duplicate.boxNumber}!`, "danger");
     currentCode.value = "";
     return;
   }
