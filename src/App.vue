@@ -311,11 +311,19 @@ const exportToExcel = () => {
     return;
   }
 
-  const data = scannedCodes.value.map((scan) => ({
-    Время: formatTime(scan.timestamp),
-    Код: scan.code,
-    "Номер коробки": scan.boxNumber,
-  }));
+  const data = scannedCodes.value.map((scan) => {
+    const all = String(scan.code).trim().split(/\s+/);
+    const code1 = all[0] ?? "";
+    const code2 = all[1] ?? "";
+    const code3 = all.length > 2 ? all.slice(2).join(" ") : (all[2] ?? "");
+    return {
+      Время: formatTime(scan.timestamp),
+      "Код 1": code1,
+      "Код 2": code2,
+      "Код 3": code3,
+      "Номер коробки": scan.boxNumber,
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
@@ -395,7 +403,9 @@ const startNewSession = () => {
 
 const confirmStartNewSession = () => {
   // Очистить историю уведомлений текущей сессии
-  try { clearHistory(); } catch {}
+  try {
+    clearHistory();
+  } catch {}
   startNewSession();
   showStartOverConfirm.value = false;
 };
