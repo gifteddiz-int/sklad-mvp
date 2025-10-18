@@ -307,24 +307,37 @@ const exportToExcel = () => {
   showAlert("Данные успешно экспортированы в Excel");
 };
 
-// Работа с localStorage
+// Хранение в локальных файлах (через preload API)
 const saveToStorage = () => {
+  // Подготовим сериализуемые данные (без Vue Proxy/реактивности)
+  const plainSettings = { ...settings.value };
+  const plainScans = scannedCodes.value.map((s) => ({
+    id: s.id,
+    timestamp: new Date(s.timestamp).toISOString(),
+    code: s.code,
+    boxNumber: s.boxNumber,
+  }));
   const data = {
-    settings: settings.value,
-    scannedCodes: scannedCodes.value,
+    settings: plainSettings,
+    scannedCodes: plainScans,
     currentBoxNumber: currentBoxNumber.value,
-    lastSave: new Date().toISOString(),
   };
-  localStorage.setItem("barcodeScannerData", JSON.stringify(data));
+  // fire-and-forget, не блокируем UI
+  // @ts-ignore - глобальный API из preload
+  window.fileStore?.saveSession(data)
+    // @ts-ignore
+    .then((res) => console.debug('Session saved to:', res?.filePath))
+    .catch(() => {});
 };
 
-const loadFromStorage = (): any => {
-  const saved = localStorage.getItem("barcodeScannerData");
-  return saved ? JSON.parse(saved) : null;
+const loadFromStorage = async (): Promise<any | null> => {
+  // @ts-ignore - глобальный API из preload
+  const saved = await window.fileStore?.loadLatestSession();
+  return saved ?? null;
 };
 
-const recoverSession = () => {
-  const savedData = loadFromStorage();
+const recoverSession = async () => {
+  const savedData = await loadFromStorage();
   if (savedData) {
     settings.value = savedData.settings;
     scannedCodes.value = savedData.scannedCodes.map((scan: any) => ({
@@ -345,7 +358,9 @@ const recoverSession = () => {
 };
 
 const startNewSession = () => {
-  localStorage.removeItem("barcodeScannerData");
+  // Очистка файла текущего дня, предыдущие дни сохраняем как бэкапы
+  // @ts-ignore - глобальный API из preload
+  window.fileStore?.clearSession?.();
   scannedCodes.value = [];
   currentBoxNumber.value = settings.value.startBoxNumber;
   showRecovery.value = false;
@@ -354,26 +369,30 @@ const startNewSession = () => {
 };
 
 // Хуки жизненного цикла
-onMounted(() => {
+onMounted(async () => {
   // Восстановление настроек
-  const savedSettings = localStorage.getItem("scannerSettings");
+  // @ts-ignore - глобальный API из preload
+  const savedSettings = await window.fileStore?.loadSettings?.();
   if (savedSettings) {
-    settings.value = JSON.parse(savedSettings);
+    settings.value = savedSettings;
   }
 
-  // Проверка сохраненной сессии
-  const savedData = loadFromStorage();
-  if (savedData && savedData.scannedCodes.length > 0) {
+  // Проверка сохраненной сессии (берем последнюю сессию из файлов)
+  const savedData = await loadFromStorage();
+  if (savedData && savedData.scannedCodes && savedData.scannedCodes.length > 0) {
     showRecovery.value = true;
-    recoveryDate.value = new Date(savedData.lastSave).toLocaleString("ru-RU");
+    if (savedData.lastSave) {
+      recoveryDate.value = new Date(savedData.lastSave).toLocaleString("ru-RU");
+    }
   } else {
     currentBoxNumber.value = settings.value.startBoxNumber;
     isConfigured.value = false;
   }
 
-  // Автосохранение настроек
+  // Автосохранение настроек в файл
   const saveSettings = () => {
-    localStorage.setItem("scannerSettings", JSON.stringify(settings.value));
+    // @ts-ignore - глобальный API из preload
+    window.fileStore?.saveSettings?.({ ...settings.value }).catch(() => {});
   };
 
   // Следим за изменениями настроек
