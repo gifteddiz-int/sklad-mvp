@@ -46,28 +46,14 @@
             <form @submit.prevent="confirmSettings">
               <div class="mb-3">
                 <label for="startBox" class="form-label">Начальный номер коробки</label>
-                <input
-                  id="startBox"
-                  v-model.number="settings.startBoxNumber"
-                  type="number"
-                  class="form-control"
-                  min="1"
-                  required
-                  autofocus
-                />
+                <input id="startBox" v-model.number="settings.startBoxNumber" type="number" class="form-control" min="1" required autofocus />
               </div>
               <div class="mb-3">
                 <label for="boxCapacity" class="form-label">Количество кодов в коробке</label>
-                <input
-                  id="boxCapacity"
-                  v-model.number="settings.codesPerBox"
-                  type="number"
-                  class="form-control"
-                  min="1"
-                  required
-                />
+                <input id="boxCapacity" v-model.number="settings.codesPerBox" type="number" class="form-control" min="1" required />
               </div>
               <button type="submit" class="btn btn-primary w-100 btn-lg">Начать сканирование</button>
+              <button type="button" class="btn btn-outline-secondary w-100 mt-3" @click="isConfigured = true" v-if="!isConfigured">Отменить изменения</button>
             </form>
           </div>
         </div>
@@ -81,12 +67,7 @@
           <small class="text-muted d-block">Сессия от {{ sessionDate }}</small>
         </div>
         <div class="d-flex gap-2">
-          <button
-            class="btn btn-outline-secondary"
-            @click="showToastHistory = true"
-            title="История уведомлений"
-            aria-label="История уведомлений"
-          >
+          <button class="btn btn-outline-secondary" @click="showToastHistory = true" title="История уведомлений" aria-label="История уведомлений">
             <i class="bi bi-bell"></i>
           </button>
           <button class="btn btn-warning" @click="isConfigured = false">Изменить настройки</button>
@@ -127,15 +108,7 @@
       <div class="card mb-4">
         <div class="card-body">
           <h5 class="card-title">Сканирование</h5>
-          <input
-            ref="scannerInput"
-            v-model="currentCode"
-            type="text"
-            class="form-control form-control-lg"
-            placeholder="Поднесите штрих-код для сканирования..."
-            @keydown.enter.prevent="handleScan"
-            autofocus
-          />
+          <input ref="scannerInput" v-model="currentCode" type="text" class="form-control form-control-lg" placeholder="Поднесите штрих-код для сканирования..." @keydown.enter.prevent="handleScan" autofocus />
           <div class="form-text">Поле всегда активно для сканирования</div>
         </div>
       </div>
@@ -163,8 +136,12 @@
               <tbody>
                 <tr v-for="(scan, index) in scannedCodes" :key="scan.id">
                   <td>{{ formatTime(scan.timestamp) }}</td>
-                  <td><code>{{ scan.code }}</code></td>
-                  <td><span class="badge bg-primary">#{{ scan.boxNumber }}</span></td>
+                  <td>
+                    <code>{{ scan.code }}</code>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">#{{ scan.boxNumber }}</span>
+                  </td>
                   <td>
                     <button class="btn btn-sm btn-outline-danger" @click="removeScan(index)">Удалить</button>
                   </td>
@@ -200,18 +177,7 @@ import { useToasts } from "@/composables/useToasts";
 import { toLocaleDateTime } from "@/utils/date";
 
 const sessionStore = useSessionStore();
-const {
-  settings,
-  isConfigured,
-  scannedCodes,
-  currentBoxNumber,
-  codesInCurrentBox,
-  totalScans,
-  hasRecovery,
-  recoverySnapshot,
-  recoveryLastSave,
-  sessionDate,
-} = storeToRefs(sessionStore);
+const { settings, isConfigured, scannedCodes, currentBoxNumber, codesInCurrentBox, totalScans, hasRecovery, recoverySnapshot, recoveryLastSave, sessionDate } = storeToRefs(sessionStore);
 
 const { push: pushToast, clearHistory } = useToasts();
 
@@ -326,7 +292,7 @@ const exportToExcel = () => {
     const parts = hasGS ? raw.split(/\x1D+/) : raw.split(/\s+/);
     const code1 = parts[0] ?? "";
     const code2 = parts[1] ?? "";
-    const code3 = parts.length > 2 ? parts.slice(2).join(" ") : parts[2] ?? "";
+    const code3 = parts.length > 2 ? parts.slice(2).join(" ") : (parts[2] ?? "");
     return {
       Время: formatTime(scan.timestamp),
       "Код 1": code1,
