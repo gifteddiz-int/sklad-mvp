@@ -80,7 +80,7 @@
             <div class="col-md-3">
               <div class="d-flex align-items-center">
                 <span class="badge bg-light text-dark me-2">Старт:</span>
-                <strong>#{{ settings.startBoxNumber }}</strong>
+                <strong>#{{ formatBoxNumber(settings.startBoxNumber) }}</strong>
               </div>
             </div>
             <div class="col-md-3">
@@ -92,7 +92,7 @@
             <div class="col-md-3">
               <div class="d-flex align-items-center">
                 <span class="badge bg-light text-dark me-2">Текущая:</span>
-                <strong class="text-primary">#{{ currentBoxNumber }}</strong>
+                <strong class="text-primary">#{{ formatBoxNumber(currentBoxNumber) }}</strong>
               </div>
             </div>
             <div class="col-md-3">
@@ -140,7 +140,7 @@
                     <code>{{ scan.code }}</code>
                   </td>
                   <td>
-                    <span class="badge bg-primary">#{{ scan.boxNumber }}</span>
+                    <span class="badge bg-primary">#{{ formatBoxNumber(scan.boxNumber) }}</span>
                   </td>
                   <td>
                     <button class="btn btn-sm btn-outline-danger" @click="removeScan(index)">Удалить</button>
@@ -189,6 +189,21 @@ const scannerInput = ref<HTMLInputElement | null>(null);
 const hydrationReady = ref(false);
 
 const recoveryDateLabel = computed(() => (recoveryLastSave.value ? toLocaleDateTime(recoveryLastSave.value) : ""));
+
+// Форматирует вывод номера коробки как "YYYYMMDDXXX"
+const formatBoxNumber = (seq: number): string => {
+  const now = new Date();
+  const date = sessionDate.value ? new Date(sessionDate.value) : now;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  const datePart = `${year}${month}${day}`;
+  const seqStr = seq >= 1000 ? String(seq) : String(seq).padStart(3, "0");
+
+  return `${datePart}${seqStr}`;
+};
 
 const sounds = {
   success: new Audio("./sounds/beep-success.mp3"),
@@ -298,7 +313,7 @@ const exportToExcel = () => {
       "Код 1": code1,
       "Код 2": code2,
       "Код 3": code3,
-      "Номер коробки": scan.boxNumber,
+      "Номер коробки": formatBoxNumber(scan.boxNumber),
     };
   });
 
