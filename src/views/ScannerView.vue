@@ -321,7 +321,9 @@ const exportToExcel = () => {
   }
 
   const data = scannedCodes.value.map((scan) => {
-    const parts = String(scan.code).trim().split(/\s+/);
+    const raw = String(scan.code).trim();
+    const hasGS = raw.includes("\x1D");
+    const parts = hasGS ? raw.split(/\x1D+/) : raw.split(/\s+/);
     const code1 = parts[0] ?? "";
     const code2 = parts[1] ?? "";
     const code3 = parts.length > 2 ? parts.slice(2).join(" ") : parts[2] ?? "";
