@@ -302,12 +302,13 @@ const exportToExcel = () => {
   }
 
   const data = scannedCodes.value.map((scan) => {
-    const raw = String(scan.code).trim();
-    const hasGS = raw.includes("\x1D");
-    const parts = hasGS ? raw.split(/\x1D+/) : raw.split(/\s+/);
-    const code1 = parts[0] ?? "";
-    const code2 = parts[1] ?? "";
-    const code3 = parts.length > 2 ? parts.slice(2).join(" ") : (parts[2] ?? "");
+    const raw = String(scan.code ?? "").trim();
+
+    // --- Разбивка по символам (аналог формул из Excel) ---
+    const code1 = raw.substring(0, 31); // ЛЕВСИМВ(A1;31)
+    const code2 = raw.substring(32, 32 + 6); // ПСТР(A1;33;6)
+    const code3 = raw.substring(39, 39 + 46); // ПСТР(A1;40;46)
+
     return {
       Время: formatTime(scan.timestamp),
       "Код 1": code1,
@@ -322,9 +323,13 @@ const exportToExcel = () => {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Отсканированные коды");
 
   const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 
-  saveAs(blob, `scanned_codes_${sessionDate.value ?? new Date().toISOString().split("T")[0]}.xlsx`);
+  const filename = `scanned_codes_${sessionDate.value ?? new Date().toISOString().split("T")[0]}.xlsx`;
+  saveAs(blob, filename);
+
   showAlert("Данные успешно экспортированы в Excel");
 };
 
