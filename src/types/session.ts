@@ -1,6 +1,7 @@
 export interface SessionSettings {
   startBoxNumber: number;
   codesPerBox: number;
+  requireBoxConfirmation?: boolean;
 }
 
 export interface ScannedCode {

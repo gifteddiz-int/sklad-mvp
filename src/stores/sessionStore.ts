@@ -14,6 +14,7 @@ import { todayISO } from '@/utils/date';
 const defaultSettings: SessionSettings = {
   startBoxNumber: 1,
   codesPerBox: 10,
+  requireBoxConfirmation: false,
 };
 
 type RecordScanResult =
@@ -72,11 +73,20 @@ export const useSessionStore = defineStore('session', () => {
     scannedCodes.value.unshift(scan);
 
     if (codesInCurrentBox.value >= settings.value.codesPerBox) {
-      currentBoxNumber.value += 1;
-      return { status: 'boxCompleted', scan, nextBoxNumber: currentBoxNumber.value };
+      // Если требуется подтверждение номера коробки — не переключаем коробку сразу
+      if (settings.value.requireBoxConfirmation) {
+        return { status: 'boxCompleted', scan, nextBoxNumber: currentBoxNumber.value + 1 };
+      } else {
+        currentBoxNumber.value += 1;
+        return { status: 'boxCompleted', scan, nextBoxNumber: currentBoxNumber.value };
+      }
     }
 
     return { status: 'recorded', scan };
+  }
+
+  function advanceBox() {
+    currentBoxNumber.value += 1;
   }
 
   function removeScan(index: number) {
@@ -165,6 +175,7 @@ export const useSessionStore = defineStore('session', () => {
     configure,
     applySettings,
     recordScan,
+    advanceBox,
     removeScan,
     resetSession,
     toSnapshot,

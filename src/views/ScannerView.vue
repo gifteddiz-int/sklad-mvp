@@ -52,6 +52,10 @@
                 <label for="boxCapacity" class="form-label">Количество кодов в коробке</label>
                 <input id="boxCapacity" v-model.number="settings.codesPerBox" type="number" class="form-control" min="1" required />
               </div>
+              <div class="form-check mb-3">
+                <input id="confirmBox" class="form-check-input" type="checkbox" v-model="settings.requireBoxConfirmation" />
+                <label for="confirmBox" class="form-check-label">Подтверждение коробки</label>
+              </div>
               <button type="submit" class="btn btn-primary w-100 btn-lg">Начать сканирование</button>
               <button type="button" class="btn btn-outline-secondary w-100 mt-3" @click="isConfigured = true" v-if="!isConfigured">Отменить изменения</button>
             </form>
@@ -108,8 +112,24 @@
       <div class="card mb-4">
         <div class="card-body">
           <h5 class="card-title">Сканирование</h5>
-          <input ref="scannerInput" v-model="currentCode" type="text" class="form-control form-control-lg" placeholder="Поднесите штрих-код для сканирования..." @keydown.enter.prevent="handleScan" autofocus />
+          <input
+            ref="scannerInput"
+            v-model="currentCode"
+            type="text"
+            class="form-control form-control-lg"
+            placeholder="Поднесите штрих-код для сканирования..."
+            @keydown.enter.prevent="handleScan"
+            autofocus
+          />
           <div class="form-text">Поле всегда активно для сканирования</div>
+
+          <div v-if="awaitingBoxConfirmation" class="alert alert-success mt-3" role="alert">
+            <strong>Ожидаем подтверждение коробки.</strong>
+            <div class="mt-1">
+              Отсканируйте номер коробки для завершения:
+              <code>#{{ expectedBoxCode }}</code>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -187,6 +207,8 @@ const showRecoveryModal = ref(false);
 const showStartOverConfirm = ref(false);
 const scannerInput = ref<HTMLInputElement | null>(null);
 const hydrationReady = ref(false);
+const awaitingBoxConfirmation = ref(false);
+const expectedBoxCode = ref("");
 
 const recoveryDateLabel = computed(() => (recoveryLastSave.value ? toLocaleDateTime(recoveryLastSave.value) : ""));
 
@@ -265,6 +287,32 @@ const handleScan = async () => {
     return;
   }
 
+  // Если ожидаем подтверждение номера коробки — проверяем ввод и не записываем скан
+  if (awaitingBoxConfirmation.value) {
+    const input = String(currentCode.value || "").trim();
+    currentCode.value = "";
+
+    if (!input) {
+      return;
+    }
+
+    if (input === expectedBoxCode.value) {
+      awaitingBoxConfirmation.value = false;
+      // После подтверждения — переключаемся на следующую коробку
+      sessionStore.advanceBox();
+      await persistSession();
+      await playSound("nextBox");
+      showAlert(`Номер коробки подтвержден. Переходим к коробке #${formatBoxNumber(currentBoxNumber.value)}`, "success");
+      focusScanner();
+      return;
+    } else {
+      await playSound("error");
+      showAlert("Неверный номер коробки. Повторите ввод.", "danger");
+      focusScanner();
+      return;
+    }
+  }
+
   const result = sessionStore.recordScan(currentCode.value);
   currentCode.value = "";
 
@@ -282,8 +330,16 @@ const handleScan = async () => {
   showAlert(`Код "${result.scan.code}" успешно отсканирован в коробку #${result.scan.boxNumber}`, "success");
 
   if (result.status === "boxCompleted") {
-    await playSound("nextBox");
-    showAlert(`Коробка заполнена! Переходим к коробке #${result.nextBoxNumber}`, "warning");
+    if (settings.value.requireBoxConfirmation) {
+      // Ждём подтверждения номера ТЕКУЩЕЙ заполненной коробки
+      expectedBoxCode.value = formatBoxNumber(result.scan.boxNumber);
+      awaitingBoxConfirmation.value = true;
+      await playSound("nextBox");
+      showAlert(`Коробка заполнена! Введите номер коробки: #${expectedBoxCode.value}`, "warning");
+    } else {
+      await playSound("nextBox");
+      showAlert(`Коробка заполнена! Переходим к коробке #${result.nextBoxNumber}`, "warning");
+    }
   }
 
   await persistSession();
