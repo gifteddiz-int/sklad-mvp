@@ -112,15 +112,7 @@
       <div class="card mb-4">
         <div class="card-body">
           <h5 class="card-title">Сканирование</h5>
-          <input
-            ref="scannerInput"
-            v-model="currentCode"
-            type="text"
-            class="form-control form-control-lg"
-            placeholder="Поднесите штрих-код для сканирования..."
-            @keydown.enter.prevent="handleScan"
-            autofocus
-          />
+          <input ref="scannerInput" v-model="currentCode" type="text" class="form-control form-control-lg" placeholder="Поднесите штрих-код для сканирования..." @keydown.enter.prevent="handleScan" autofocus />
           <div class="form-text">Поле всегда активно для сканирования</div>
 
           <div v-if="awaitingBoxConfirmation" class="alert alert-success mt-3" role="alert">
@@ -195,6 +187,7 @@ import ToastHistoryModal from "@/components/ToastHistoryModal.vue";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useToasts } from "@/composables/useToasts";
 import { toLocaleDateTime } from "@/utils/date";
+import { apiSetPrintLabel } from "@/services/api";
 
 const sessionStore = useSessionStore();
 const { settings, isConfigured, scannedCodes, currentBoxNumber, codesInCurrentBox, totalScans, hasRecovery, recoverySnapshot, recoveryLastSave, sessionDate } = storeToRefs(sessionStore);
@@ -334,6 +327,12 @@ const handleScan = async () => {
       // Ждём подтверждения номера ТЕКУЩЕЙ заполненной коробки
       expectedBoxCode.value = formatBoxNumber(result.scan.boxNumber);
       awaitingBoxConfirmation.value = true;
+      // Отправляем запрос на печать этикетки для текущей коробки
+      try {
+        await apiSetPrintLabel(expectedBoxCode.value);
+      } catch (e) {
+        showAlert("Не удалось отправить печать этикетки", "danger");
+      }
       await playSound("nextBox");
       showAlert(`Коробка заполнена! Введите номер коробки: #${expectedBoxCode.value}`, "warning");
     } else {
